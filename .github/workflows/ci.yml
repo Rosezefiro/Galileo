@@ -1,41 +1,25 @@
-
-name: Build Galileo for Windows
+# Regression gate: every push/PR must pass the service-level test suite (storage transactions,
+# vault recovery, transfer cancellation, state merging, wipe outcomes) and produce a clean
+# Release build of the app. See src/Galileo.Tests for what is covered.
+name: CI
 
 on:
-  workflow_dispatch:
   push:
     branches: [main]
   pull_request:
 
 jobs:
-  build:
+  test-and-build:
     runs-on: windows-latest
-
     steps:
-      - name: Download source code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Install .NET SDK
-        uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v4
         with:
           global-json-file: global.json
 
-      - name: Run tests
+      - name: Run service tests
         run: dotnet test src/Galileo.Tests/Galileo.Tests.csproj -c Release --nologo
 
-      - name: Build Windows application
-        run: >
-          dotnet publish src/Galileo.App/Galileo.App.csproj
-          -c Release
-          -r win-x64
-          --self-contained true
-          -p:WindowsPackageType=None
-          -o publish
-
-      - name: Upload downloadable application
-        uses: actions/upload-artifact@v4
-        with:
-          name: Galileo-Windows-x64
-          path: publish/
-          if-no-files-found: error
-          retention-days: 7
+      - name: Build the app (Release)
+        run: dotnet build src/Galileo.App/Galileo.App.csproj -c Release --nologo
